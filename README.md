@@ -23,6 +23,8 @@ A free multiplayer Boggle game for phones. There's no server, no accounts and no
 - Click **Start round 2**. You get a new board and a new QR code with the same settings.
   Players either scan the new QR code, which takes them straight in because their name is remembered, or type the new code into the **Next round** box on their results screen.
 - Repeat for round 3. **Change round settings** goes back to the setup screen.
+- **Started by accident?** While a round is counting down or being played, use **↺ Restart round**, which gives a new board and new join link but keeps the same round number. Or use **✕ Cancel round** to go back to setup; the round won't count.
+  Players who already joined keep seeing the old round, so post the new join link in the chat.
 - **Resetting for a new game:** after any round, click **Finish game & reset to round 1**. The setup screen also has a **Start again from round 1** link.
 - **Playing on the host laptop:** use the **Play on this computer** button. The big-screen board is for display only.
 

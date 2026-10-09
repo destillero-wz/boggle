@@ -129,6 +129,8 @@
   .host .timer-huge { font-size: 120px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
   .small-qr { display: flex; gap: 16px; align-items: center; }
   .host .board .tile { cursor: not-allowed; }
+  .host-controls { margin: 4px 0 8px; color: var(--muted); }
+  .host-controls .link-btn { margin-top: 0; }
   .host-note { font-size: 15px; margin: 0 0 12px; transition: color 0.2s; }
   .host-note.nudge { color: var(--accent); }
   .play-link {
@@ -269,6 +271,10 @@
       <div class="center">
         <div style="color:var(--muted);font-size:20px" id="hostPhase">Starts in</div>
         <div class="timer-huge" id="hostTimer">--</div>
+        <div class="host-controls" id="hostControls">
+          <button class="link-btn" id="restartBtn">↺ Restart round (new board)</button> ·
+          <button class="link-btn" id="cancelBtn">✕ Cancel round</button>
+        </div>
         <div class="board waiting" id="hostBoard"></div>
         <p class="host-note" id="hostNote">This board is for display. Join from the chat link, or use <b>Play on this computer</b>.</p>
         <a class="play-link" id="playHere" target="_blank" rel="noopener" style="margin:0 0 16px">Play on this computer ↗</a>
@@ -650,6 +656,7 @@
     $('hostBoard').classList.add('waiting');
     $('lateJoin').classList.add('hidden');
     $('copyLinkBtn2').classList.add('hidden');
+    $('hostControls').classList.remove('hidden');
     $('hostTimer').style.color = '';
     const url = location.origin + location.pathname + '?g=' + round.code;
     const board = makeBoard(round.code);
@@ -697,6 +704,7 @@
         $('hostBoard').classList.remove('waiting');
         $('lateJoin').classList.add('hidden');
         $('copyLinkBtn2').classList.add('hidden');
+        $('hostControls').classList.add('hidden');
         $('hostTitle').textContent = `Round ${num} · Time's up!`;
         $('hostPhase').textContent = 'Round ' + num + ' · code ' + round.code;
         $('newRoundBtn').textContent = `Start round ${num + 1}`;
@@ -717,6 +725,19 @@
       createRound(s.seconds, s.lead);
     };
     $('settingsBtn').onclick = () => { store.set('bb-host', null); clearInterval(iv); startHost(); };
+    // Undo an accidental start: the round number is given back so it doesn't count
+    const undoRound = () => { clearInterval(iv); store.set('bb-host', null); store.set('bb-round-num', num - 1); };
+    $('restartBtn').onclick = () => {
+      if (!confirm(`Restart round ${num} with a new board and a new join link?`)) return;
+      undoRound();
+      const s = store.get('bb-settings') || { seconds: 90, lead: 30 };
+      createRound(s.seconds, s.lead);
+    };
+    $('cancelBtn').onclick = () => {
+      if (!confirm(`Cancel round ${num} and go back to the setup screen?`)) return;
+      undoRound();
+      startHost();
+    };
     $('resetBtn').onclick = () => { store.set('bb-host', null); store.set('bb-round-num', 0); clearInterval(iv); startHost(); };
     const iv = setInterval(tick, 200); tick();
   }
