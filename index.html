@@ -45,6 +45,30 @@
   input:focus, select:focus { border-color: var(--accent); }
   #codeInput, .code-input { text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; }
   .next-round { border-color: var(--accent); }
+
+  /* Host join box */
+  .join-box { border-color: var(--accent); margin-top: 0; }
+  .join-label { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .join-link { font-size: 18px; font-family: ui-monospace, Consolas, monospace; color: var(--accent); word-break: break-all; padding: 10px 12px; background: rgba(0,0,0,0.3); border-radius: 10px; }
+  .phone-join { display: flex; gap: 16px; align-items: center; }
+  .phone-join .qr { padding: 10px; }
+  .phone-join .code-big { font-size: 36px; display: inline-block; margin-top: 4px; }
+
+  /* How to play */
+  .howto-title { font-size: clamp(28px, 4vw, 48px); margin-bottom: 20px; }
+  .howto-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: start; }
+  @media (max-width: 860px) { .howto-grid { grid-template-columns: 1fr; } }
+  .step { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+  .step > b { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #1b1d3a; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .step h3 { margin: 4px 0 2px; font-size: 22px; }
+  .step p { margin: 0; font-size: 18px; color: var(--text); opacity: 0.85; }
+  .score-table { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .score-table span { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; font-size: 17px; }
+  .score-table i { font-style: normal; color: var(--accent); font-weight: 700; margin-left: 4px; }
+  .example-board { max-width: 380px; position: relative; }
+  .example-board .tile { font-size: 44px; position: relative; }
+  .example-board .tile em { position: absolute; top: 6px; right: 10px; font-size: 16px; font-style: normal; }
+  .howto-example p { font-size: 18px; }
   .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 14px; width: auto; padding: 4px; margin-top: 10px; }
   button {
     font: inherit; font-weight: 600; font-size: 17px; border: 0; border-radius: 12px; padding: 13px 18px;
@@ -186,7 +210,8 @@
   <!-- ============ HOST ============ -->
   <section id="hostSetup" class="hidden">
     <h1>Big Bang <span>Boggle</span> · Host</h1>
-    <p>Put this screen on the big display. Create a round, then players scan the QR code with their phone camera. Everyone gets the same board and the timer starts for everyone at the same moment.</p>
+    <p>Put this screen on the big display. Create a round, then copy the join link into the Teams chat so people can join on their laptops (or scan the QR code with a phone). Everyone gets the same board and the timer starts for everyone at the same moment.</p>
+    <button class="ghost" id="howToBtn" style="max-width:520px">📖 Show "How to play" to the team</button>
     <div class="panel" style="max-width:520px">
       <div class="row">
         <div>
@@ -220,10 +245,16 @@
       <div>
         <h1 id="hostTitle">Scan to join</h1>
         <div id="hostJoinBlock">
-          <div class="qr" id="qr"></div>
-          <p style="margin-top:12px">Or go to the link below and enter the code:</p>
-          <div class="code-big" id="hostCode"></div>
-          <div class="url" id="hostUrl"></div>
+          <div class="panel join-box">
+            <div class="join-label">💻 Best on a laptop: click the link in the Teams chat</div>
+            <div class="join-link" id="joinLink"></div>
+            <button id="copyLinkBtn">📋 Copy join link for the chat</button>
+            <div class="msg good" id="copyMsg"></div>
+          </div>
+          <div class="phone-join">
+            <div class="qr" id="qr"></div>
+            <p>📱 Or scan with your phone<br>Code: <span class="code-big" id="hostCode"></span></p>
+          </div>
         </div>
         <div id="hostEndBlock" class="hidden">
           <div class="panel">
@@ -239,11 +270,34 @@
         <div style="color:var(--muted);font-size:20px" id="hostPhase">Starts in</div>
         <div class="timer-huge" id="hostTimer">--</div>
         <div class="board waiting" id="hostBoard"></div>
-        <p class="host-note" id="hostNote">📱 This board is for display. Play on your phone, or use <b>Play on this computer</b>.</p>
+        <p class="host-note" id="hostNote">This board is for display. Join from the chat link, or use <b>Play on this computer</b>.</p>
         <a class="play-link" id="playHere" target="_blank" rel="noopener" style="margin:0 0 16px">Play on this computer ↗</a>
-        <div class="small-qr hidden" id="lateJoin"><div class="qr" id="qrSmall"></div><p style="text-align:left">Late? Scan to join.<br>Code <b id="hostCodeSmall" style="color:var(--accent)"></b></p></div>
+        <div class="small-qr hidden" id="lateJoin"><div class="qr" id="qrSmall"></div><p style="text-align:left">Late? Click the link in the chat,<br>or scan. Code <b id="hostCodeSmall" style="color:var(--accent)"></b></p></div>
+        <button class="ghost hidden" id="copyLinkBtn2" style="max-width:320px">📋 Copy join link again</button>
       </div>
     </div>
+  </section>
+
+  <!-- ============ HOST: HOW TO PLAY ============ -->
+  <section id="howTo" class="hidden">
+    <h1 class="howto-title">How to play Big Bang <span>Boggle</span></h1>
+    <div class="howto-grid">
+      <div class="howto-steps">
+        <div class="step"><b>1</b><div><h3>Join</h3><p>Click the link in the <b>Teams chat</b>. It's best on your laptop. Enter your name and wait for the countdown. (Phones work too: scan the QR code.)</p></div></div>
+        <div class="step"><b>2</b><div><h3>Make words</h3><p>Join letters that <b>touch</b>: up, down, sideways or diagonally. Each letter can only be used <b>once per word</b>. Words need <b>3+ letters</b>.</p></div></div>
+        <div class="step"><b>3</b><div><h3>Enter them fast</h3><p>On a laptop, just <b>type the word and press Enter</b>. Or drag across the letters with your mouse or finger.</p></div></div>
+        <div class="step"><b>4</b><div><h3>Score</h3>
+          <div class="score-table">
+            <span>3 letters <i>1 pt</i></span><span>4 letters <i>2 pts</i></span><span>5 letters <i>3 pts</i></span><span>6 letters <i>4 pts</i></span><span>…and so on</span>
+          </div></div></div>
+        <div class="step"><b>5</b><div><h3>Post your score</h3><p>When time's up, <b>screenshot your score</b> and post it in the chat. Highest score wins the round. We'll play <b>3 rounds</b>!</p></div></div>
+      </div>
+      <div class="howto-example">
+        <div class="board example-board" id="exampleBoard"></div>
+        <p class="center">Example: <b style="color:var(--accent)">T → E → A → M</b> makes <b>TEAM</b> = 2 pts.<br>A → M goes diagonally, which is allowed.</p>
+      </div>
+    </div>
+    <button id="howToBack" style="max-width:320px">← Back to host setup</button>
   </section>
 
   <div class="footer">Big Bang Boggle · no data leaves your device</div>
@@ -563,6 +617,21 @@
     label();
     $('resetCountBtn').onclick = () => { store.set('bb-round-num', 0); label(); };
     $('createBtn').onclick = () => createRound(+$('durSel').value, +$('leadSel').value);
+    $('howToBtn').onclick = showHowTo;
+  }
+
+  function showHowTo() {
+    show('howTo');
+    window.scrollTo(0, 0);
+    const letters = ['c','w','o','r','t','e','a','d','l','m','s','k','p','i','n','g'];
+    const path = [4, 5, 6, 9]; // T E A M
+    renderBoard($('exampleBoard'), letters);
+    path.forEach((i, n) => {
+      const t = $('exampleBoard').children[i];
+      t.classList.add('sel');
+      t.insertAdjacentHTML('beforeend', `<em>${n + 1}</em>`);
+    });
+    $('howToBack').onclick = startHost;
   }
 
   function createRound(seconds, lead) {
@@ -580,14 +649,22 @@
     const num = store.get('bb-round-num') || 1;
     $('hostBoard').classList.add('waiting');
     $('lateJoin').classList.add('hidden');
+    $('copyLinkBtn2').classList.add('hidden');
     $('hostTimer').style.color = '';
     const url = location.origin + location.pathname + '?g=' + round.code;
     const board = makeBoard(round.code);
     $('qr').innerHTML = ''; $('qrSmall').innerHTML = '';
-    new QRCode($('qr'), { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M });
+    new QRCode($('qr'), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
     new QRCode($('qrSmall'), { text: url, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M });
     $('hostCode').textContent = $('hostCodeSmall').textContent = round.code;
-    $('hostUrl').textContent = location.origin + location.pathname;
+    $('joinLink').textContent = url;
+    const copyLink = async () => {
+      const text = `🔠 Big Bang Boggle round ${num}: click to join ${url}`;
+      try { await navigator.clipboard.writeText(text); $('copyMsg').textContent = 'Copied! Paste it in the Teams chat.'; }
+      catch { prompt('Copy this and paste it in the Teams chat:', text); }
+    };
+    $('copyMsg').textContent = '';
+    $('copyLinkBtn').onclick = $('copyLinkBtn2').onclick = copyLink;
     $('playHere').href = url;
     renderBoard($('hostBoard'), board);
     $('hostBoard').onpointerdown = () => {
@@ -608,6 +685,7 @@
           phase = 'play';
           $('hostBoard').classList.remove('waiting');
           $('lateJoin').classList.remove('hidden');
+          $('copyLinkBtn2').classList.remove('hidden');
           $('hostJoinBlock').classList.add('hidden');
           $('hostTitle').textContent = `Round ${num} · Go! 🚀`;
           $('hostPhase').textContent = 'Time left';
@@ -618,6 +696,7 @@
         phase = 'over'; clearInterval(iv);
         $('hostBoard').classList.remove('waiting');
         $('lateJoin').classList.add('hidden');
+        $('copyLinkBtn2').classList.add('hidden');
         $('hostTitle').textContent = `Round ${num} · Time's up!`;
         $('hostPhase').textContent = 'Round ' + num + ' · code ' + round.code;
         $('newRoundBtn').textContent = `Start round ${num + 1}`;
