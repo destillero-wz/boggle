@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Big Bang Boggle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1024;
+    --bg2: #1a1f45;
+    --panel: rgba(255,255,255,0.06);
+    --line: rgba(255,255,255,0.12);
+    --text: #f3f4ff;
+    --muted: #a3a8d6;
+    --tile: #fdf6e3;
+    --tile-text: #1b1d3a;
+    --accent: #ffb703;
+    --accent2: #8b5cf6;
+    --good: #22c55e;
+    --bad: #f43f5e;
+    --sel: #ffb703;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg) 70%) fixed, var(--bg);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
+  .host .wrap { max-width: 1200px; }
+  h1 { font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 4px; font-size: 28px; }
+  h1 span { color: var(--accent); }
+  h2 { margin: 0 0 8px; font-size: 18px; }
+  p { color: var(--muted); line-height: 1.5; margin: 6px 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select {
+    width: 100%; font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  #codeInput, .code-input { text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; }
+  .next-round { border-color: var(--accent); }
+  .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 14px; width: auto; padding: 4px; margin-top: 10px; }
+  button {
+    font: inherit; font-weight: 600; font-size: 17px; border: 0; border-radius: 12px; padding: 13px 18px;
+    background: var(--accent); color: #1b1d3a; cursor: pointer; width: 100%; margin-top: 14px;
+  }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .hidden { display: none !important; }
+  .center { text-align: center; }
+  .big { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; }
+
+  /* Game header */
+  .hud { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 10px; }
+  .hud .timer { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .hud .timer.low { color: var(--bad); }
+  .hud .score { text-align: right; font-size: 13px; color: var(--muted); }
+  .hud .score b { display: block; font-size: 26px; color: var(--accent); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 100%; transition: width 0.25s linear; }
+
+  /* Board */
+  .board {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px auto; width: 100%;
+    max-width: 440px; aspect-ratio: 1; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .tile {
+    background: var(--tile); color: var(--tile-text); border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: clamp(28px, 10vw, 46px); box-shadow: 0 4px 0 #c9bfa5;
+    transition: transform 0.08s, background 0.08s;
+  }
+  .tile.qu { font-size: clamp(22px, 8vw, 38px); }
+  .tile.sel { background: var(--sel); box-shadow: 0 4px 0 #b47f00; transform: scale(0.95); }
+  .tile.last { background: #ffd166; }
+  .board.flash-good .tile.sel { background: var(--good); box-shadow: 0 4px 0 #15803d; color: #fff; }
+  .board.flash-bad .tile.sel { background: var(--bad); box-shadow: 0 4px 0 #9f1239; color: #fff; }
+  .board.waiting .tile { color: transparent; }
+
+  .current { min-height: 44px; text-align: center; font-size: 28px; font-weight: 800; letter-spacing: 0.08em; }
+  .msg { min-height: 22px; text-align: center; font-weight: 600; }
+  .msg.good { color: var(--good); } .msg.bad { color: var(--bad); }
+  .words { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .words span { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 14px; text-transform: uppercase; }
+  .words span i { font-style: normal; color: var(--accent); margin-left: 4px; font-size: 12px; }
+  .words.missed span { color: var(--muted); }
+
+  /* Host */
+  .host-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .host-grid { grid-template-columns: 1fr; } }
+  .qr { background: #fff; padding: 16px; border-radius: 16px; display: inline-block; }
+  .qr img, .qr canvas { display: block; }
+  .code-big { font-size: 56px; font-weight: 800; letter-spacing: 0.15em; color: var(--accent); }
+  .url { font-size: 14px; color: var(--muted); word-break: break-all; }
+  .host .board { max-width: 560px; }
+  .host .tile { font-size: 64px; }
+  .host .tile.qu { font-size: 52px; }
+  .host .timer-huge { font-size: 120px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .small-qr { display: flex; gap: 16px; align-items: center; }
+  .host .board .tile { cursor: not-allowed; }
+  .host-note { font-size: 15px; margin: 0 0 12px; transition: color 0.2s; }
+  .host-note.nudge { color: var(--accent); }
+  .play-link {
+    display: inline-block; margin-top: 16px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line);
+    color: var(--text); text-decoration: none; font-weight: 600;
+  }
+  .play-link:hover { border-color: var(--accent); }
+  .footer { text-align: center; font-size: 12px; color: var(--muted); margin: 24px 0 8px; }
+  .footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <!-- ============ PLAYER: JOIN ============ -->
+  <section id="joinView" class="hidden">
+    <h1>Big Bang <span>Boggle</span></h1>
+    <p>Find as many words as you can by dragging across touching letters. Words need at least 3 letters.</p>
+    <div class="panel">
+      <label for="nameInput">Your name</label>
+      <input id="nameInput" maxlength="24" placeholder="e.g. Sam" autocomplete="off">
+      <label for="codeInput">Round code</label>
+      <input id="codeInput" maxlength="5" placeholder="ABCD3" autocomplete="off" autocapitalize="characters">
+      <button id="joinBtn">Join round</button>
+      <div class="msg bad" id="joinMsg"></div>
+    </div>
+    <p class="center"><a href="?host" style="color:var(--muted)">Hosting? Open the host screen →</a></p>
+  </section>
+
+  <!-- ============ PLAYER: GAME ============ -->
+  <section id="gameView" class="hidden">
+    <div class="hud">
+      <div>
+        <div class="timer" id="timer">--:--</div>
+        <div style="font-size:12px;color:var(--muted)" id="roundLabel"></div>
+      </div>
+      <div class="score"><b id="score">0</b><span id="wordCount">0 words</span></div>
+    </div>
+    <div class="bar"><div id="bar"></div></div>
+    <div class="msg" id="statusMsg" style="margin-top:10px"></div>
+    <div class="board waiting" id="board"></div>
+    <div class="current" id="current"></div>
+    <div class="row">
+      <button class="ghost" id="clearBtn" style="margin-top:4px">Clear</button>
+      <button id="submitBtn" style="margin-top:4px">Submit</button>
+    </div>
+    <p class="center" style="font-size:12px">Drag across letters, or tap them and press Submit. On a keyboard, type and press Enter.</p>
+    <div class="words" id="foundList"></div>
+  </section>
+
+  <!-- ============ PLAYER: RESULTS ============ -->
+  <section id="resultView" class="hidden">
+    <h1>Time's <span>up!</span></h1>
+    <div class="panel center">
+      <div id="resName" style="color:var(--muted)"></div>
+      <div class="big" id="resScore">0</div>
+      <div id="resSummary" style="color:var(--muted)"></div>
+      <button id="shareBtn">Copy my result</button>
+      <div class="msg good" id="shareMsg"></div>
+    </div>
+    <div class="panel next-round">
+      <h2>Next round ➜</h2>
+      <p>When the host starts the next round, scan the new QR code on the big screen, or type the new code here.</p>
+      <input id="nextCode" class="code-input" maxlength="5" placeholder="ABCD3" autocomplete="off" autocapitalize="characters">
+      <button id="nextJoinBtn">Join next round</button>
+      <div class="msg bad" id="nextMsg"></div>
+    </div>
+    <div class="panel">
+      <h2>Your words</h2>
+      <div class="words" id="resWords"></div>
+    </div>
+    <div class="panel">
+      <h2>Best words you missed</h2>
+      <div class="words missed" id="missedWords"><span>Calculating…</span></div>
+    </div>
+  </section>
+
+  <!-- ============ HOST ============ -->
+  <section id="hostSetup" class="hidden">
+    <h1>Big Bang <span>Boggle</span> · Host</h1>
+    <p>Put this screen on the big display. Create a round, then players scan the QR code with their phone camera. Everyone gets the same board and the timer starts for everyone at the same moment.</p>
+    <div class="panel" style="max-width:520px">
+      <div class="row">
+        <div>
+          <label for="durSel">Round length</label>
+          <select id="durSel">
+            <option value="60">60 seconds</option>
+            <option value="90" selected>90 seconds</option>
+            <option value="120">2 minutes</option>
+            <option value="180">3 minutes</option>
+          </select>
+        </div>
+        <div>
+          <label for="leadSel">Time to join</label>
+          <select id="leadSel">
+            <option value="0">Start now</option>
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60" selected>1 minute</option>
+            <option value="90">90 seconds</option>
+            <option value="120">2 minutes</option>
+          </select>
+        </div>
+      </div>
+      <button id="createBtn">Create round</button>
+      <div class="center"><button class="link-btn" id="resetCountBtn">Start again from round 1</button></div>
+    </div>
+  </section>
+
+  <section id="hostRound" class="hidden">
+    <div class="host-grid">
+      <div>
+        <h1 id="hostTitle">Scan to join</h1>
+        <div id="hostJoinBlock">
+          <div class="qr" id="qr"></div>
+          <p style="margin-top:12px">Or go to the link below and enter the code:</p>
+          <div class="code-big" id="hostCode"></div>
+          <div class="url" id="hostUrl"></div>
+        </div>
+        <div id="hostEndBlock" class="hidden">
+          <div class="panel">
+            <h2 id="possibleLabel"></h2>
+            <p>Players: tap <b>Copy my result</b> and paste it in the Teams chat, or shout out your score. Highest score wins.</p>
+            <div class="words missed" id="hostAllWords"></div>
+          </div>
+          <button id="newRoundBtn" style="max-width:320px">Start next round</button>
+          <div><button class="link-btn" id="settingsBtn">Change round settings</button></div>
+        </div>
+      </div>
+      <div class="center">
+        <div style="color:var(--muted);font-size:20px" id="hostPhase">Starts in</div>
+        <div class="timer-huge" id="hostTimer">--</div>
+        <div class="board waiting" id="hostBoard"></div>
+        <p class="host-note" id="hostNote">📱 This board is for display. Play on your phone, or use <b>Play on this computer</b>.</p>
+        <a class="play-link" id="playHere" target="_blank" rel="noopener" style="margin:0 0 16px">Play on this computer ↗</a>
+        <div class="small-qr hidden" id="lateJoin"><div class="qr" id="qrSmall"></div><p style="text-align:left">Late? Scan to join.<br>Code <b id="hostCodeSmall" style="color:var(--accent)"></b></p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">Big Bang Boggle · no data leaves your device</div>
+</div>
+
+<script src="qrcode.min.js"></script>
+<script>
+(() => {
+  // ---------- Constants ----------
+  const ALPH = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 32 chars, no 0/O/1/I
+  const SLOT_MS = 1000;                 // round start times snap to whole seconds
+  const MOD = 32 ** 4;                  // 4-char code covers ~12 days of slots
+  const DICE = ['AAEEGN','ABBJOO','ACHOPS','AFFKPS','AOOTTW','CIMOTU','DEILRX','DELRVY',
+                'DISTTY','EEGHNW','EEINSU','EHRTVW','EIOSST','ELRTTY','HIMNUQ','HLNNRZ'];
+  const ADJ = Array.from({length: 16}, (_, i) => {
+    const r = Math.floor(i / 4), c = i % 4, out = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < 4 && nc >= 0 && nc < 4) out.push(nr * 4 + nc);
+    }
+    return out;
+  });
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  // ---------- Round code <-> start time ----------
+  // 5th character = round length in 30-second units (ALPH index + 1), e.g. '3' = 60s, '4' = 90s
+  function encodeRound(startMs, seconds) {
+    let n = Math.floor(startMs / SLOT_MS) % MOD, s = '';
+    for (let i = 0; i < 4; i++) { s = ALPH[n % 32] + s; n = Math.floor(n / 32); }
+    return s + ALPH[Math.round(seconds / 30) - 1];
+  }
+  function decodeRound(code) {
+    code = (code || '').toUpperCase().trim();
+    if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{5}$/.test(code)) return null;
+    let n = 0;
+    for (const ch of code.slice(0, 4)) n = n * 32 + ALPH.indexOf(ch);
+    const nowSlot = Math.floor(Date.now() / SLOT_MS);
+    let slot = nowSlot - (((nowSlot - n) % MOD) + MOD) % MOD;   // most recent matching slot
+    if (nowSlot - slot > MOD / 2) slot += MOD;                   // or the next one, if nearer
+    const start = slot * SLOT_MS, seconds = (ALPH.indexOf(code[4]) + 1) * 30;
+    return { code, start, end: start + seconds * 1000, seconds };
+  }
+
+  // ---------- Seeded board ----------
+  function seedFrom(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+    return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return (h ^= h >>> 16) >>> 0; };
+  }
+  function makeBoard(code) {
+    const seed = seedFrom('bigbang-' + code);
+    let a = 0x9e3779b9 ^ seed();
+    const rand = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const dice = DICE.slice();
+    for (let i = dice.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [dice[i], dice[j]] = [dice[j], dice[i]]; }
+    return dice.map(d => { const ch = d[Math.floor(rand() * 6)].toLowerCase(); return ch === 'q' ? 'qu' : ch; });
+  }
+
+  // ---------- Dictionary & solving ----------
+  let dict = null, dictPromise = null;
+  function loadDict() {
+    if (!dictPromise) dictPromise = fetch('words.txt').then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(t => { dict = new Set(t.split('\n').map(w => w.trim()).filter(Boolean)); return dict; });
+    return dictPromise;
+  }
+  function findPath(word, board) {
+    const dfs = (i, pos, used, path) => {
+      const t = board[i];
+      if (!word.startsWith(t, pos)) return null;
+      const np = pos + t.length; path.push(i);
+      if (np === word.length) return path;
+      const u = used | (1 << i);
+      for (const n of ADJ[i]) if (!(u >> n & 1)) { const p = dfs(n, np, u, path); if (p) return p; }
+      path.pop(); return null;
+    };
+    for (let i = 0; i < 16; i++) { const p = dfs(i, 0, 0, []); if (p) return p; }
+    return null;
+  }
+  function solve(board) {
+    const letters = new Set(board.join(''));
+    const out = [];
+    for (const w of dict) {
+      let ok = true;
+      for (let k = 0; k < w.length; k++) if (!letters.has(w[k])) { ok = false; break; }
+      if (ok && findPath(w, board)) out.push(w);
+    }
+    return out.sort((a, b) => b.length - a.length || a.localeCompare(b));
+  }
+  const points = w => w.length <= 4 ? 1 : w.length === 5 ? 2 : w.length === 6 ? 3 : w.length === 7 ? 5 : 11;
+  const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const show = (...ids) => { for (const s of document.querySelectorAll('section')) s.classList.toggle('hidden', !ids.includes(s.id)); };
+  const tileLabel = t => t === 'qu' ? 'Qu' : t.toUpperCase();
+
+  function renderBoard(el, board) {
+    el.innerHTML = '';
+    board.forEach((t, i) => {
+      const d = document.createElement('div');
+      d.className = 'tile' + (t === 'qu' ? ' qu' : '');
+      d.textContent = tileLabel(t); d.dataset.i = i;
+      el.appendChild(d);
+    });
+  }
+
+  // =====================================================================
+  //  PLAYER
+  // =====================================================================
+  function startPlayer() {
+    const params = new URLSearchParams(location.search);
+    $('nameInput').value = store.get('bb-name') || '';
+    $('codeInput').value = (params.get('g') || '').toUpperCase();
+    show('joinView');
+    loadDict().catch(() => {});
+    if ($('codeInput').value && $('nameInput').value) $('joinBtn').focus(); else if ($('codeInput').value) $('nameInput').focus();
+    const join = () => {
+      const name = $('nameInput').value.trim();
+      const round = decodeRound($('codeInput').value);
+      if (!name) { $('joinMsg').textContent = 'Enter your name.'; return; }
+      if (!round) { $('joinMsg').textContent = 'That code doesn\'t look right. It\'s 5 letters or numbers, shown on the big screen.'; return; }
+      if (Date.now() > round.end + 30 * 60000) { $('joinMsg').textContent = 'That round has finished. Scan the latest QR code.'; return; }
+      store.set('bb-name', name);
+      history.replaceState(null, '', '?g=' + round.code);
+      playRound(name, round);
+    };
+    $('joinBtn').onclick = join;
+    $('codeInput').onkeydown = $('nameInput').onkeydown = e => { if (e.key === 'Enter') join(); };
+    // Returning players (name remembered) go straight into the round from the QR link
+    if ($('nameInput').value.trim() && decodeRound($('codeInput').value)) join();
+  }
+
+  function playRound(name, round) {
+    const board = makeBoard(round.code);
+    const saveKey = 'bb-round-' + round.code;
+    const found = store.get(saveKey) || [];
+    let path = [], typed = '', phase = '', msgTimer = 0;
+    const boardEl = $('board');
+    renderBoard(boardEl, board);
+    $('roundLabel').textContent = 'Round ' + round.code + ' · ' + name;
+    show('gameView');
+
+    const total = () => found.reduce((s, w) => s + points(w), 0);
+    function renderFound() {
+      $('score').textContent = total();
+      $('wordCount').textContent = found.length + (found.length === 1 ? ' word' : ' words');
+      $('foundList').innerHTML = found.slice().reverse().map(w => `<span>${w}<i>+${points(w)}</i></span>`).join('');
+    }
+    function renderPath() {
+      const tiles = boardEl.children;
+      for (let i = 0; i < 16; i++) tiles[i].classList.toggle('sel', path.includes(i)), tiles[i].classList.toggle('last', false);
+      if (path.length) tiles[path[path.length - 1]].classList.add('last');
+      $('current').textContent = (typed || path.map(i => board[i]).join('')).toUpperCase();
+    }
+    function say(text, kind) {
+      const m = $('statusMsg'); m.textContent = text; m.className = 'msg ' + (kind || '');
+      clearTimeout(msgTimer); msgTimer = setTimeout(() => { if (phase === 'play') { m.textContent = ''; } }, 1600);
+    }
+    function submit() {
+      if (phase !== 'play') return;
+      let word = typed || path.map(i => board[i]).join('');
+      if (typed) { const p = findPath(typed, board); if (!p) { say('Not on the board', 'bad'); flash('bad'); return; } path = p; }
+      if (!word) return;
+      if (word.length < 3) say('Too short (3+ letters)', 'bad'), flash('bad');
+      else if (found.includes(word)) say('Already found', 'bad'), flash('bad');
+      else if (!dict) say('Dictionary still loading…', 'bad');
+      else if (!dict.has(word)) say(word.toUpperCase() + ' isn\'t in the dictionary', 'bad'), flash('bad');
+      else {
+        found.push(word); store.set(saveKey, found); renderFound();
+        const p = points(word);
+        say(`${word.toUpperCase()} +${p}${p >= 5 ? ' 🔥' : ''}`, 'good'); flash('good');
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+    }
+    function flash(kind) {
+      renderPath();
+      boardEl.classList.add('flash-' + kind);
+      const snapshot = path;
+      setTimeout(() => { boardEl.classList.remove('flash-' + kind); if (path === snapshot) { path = []; typed = ''; renderPath(); } }, 280);
+    }
+    function clearSel() { path = []; typed = ''; renderPath(); }
+
+    // ---- Touch / mouse input ----
+    let gesture = null;
+    function tileAt(x, y, strict) {
+      for (const t of boardEl.children) {
+        const r = t.getBoundingClientRect();
+        if (strict) {
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          if (Math.hypot(x - cx, y - cy) < r.width * 0.42) return +t.dataset.i;
+        } else if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +t.dataset.i;
+      }
+      return -1;
+    }
+    function enter(i) {
+      const last = path[path.length - 1];
+      if (i === last) return false;
+      if (path.length > 1 && i === path[path.length - 2]) { path.pop(); return true; }
+      if (path.includes(i)) return false;
+      if (!path.length || ADJ[last].includes(i)) { path.push(i); return true; }
+      return false;
+    }
+    boardEl.addEventListener('pointerdown', e => {
+      if (phase !== 'play') return;
+      e.preventDefault();
+      const i = tileAt(e.clientX, e.clientY, false);
+      if (i < 0) return;
+      boardEl.setPointerCapture(e.pointerId);
+      typed = '';
+      const last = path[path.length - 1];
+      const startedOnLast = path.length > 0 && i === last;
+      if (!startedOnLast) {
+        const at = path.indexOf(i);
+        if (at >= 0) path = path.slice(0, at + 1);
+        else if (path.length && ADJ[last].includes(i)) path.push(i);
+        else path = [i];
+      }
+      gesture = { startedOnLast, moved: 0 };
+      renderPath();
+    });
+    boardEl.addEventListener('pointermove', e => {
+      if (!gesture || phase !== 'play') return;
+      const i = tileAt(e.clientX, e.clientY, true);
+      if (i >= 0 && enter(i)) { gesture.moved++; renderPath(); }
+    });
+    const end = () => {
+      if (!gesture) return;
+      const g = gesture; gesture = null;
+      if (g.moved > 0 || g.startedOnLast) submit();
+    };
+    boardEl.addEventListener('pointerup', end);
+    boardEl.addEventListener('pointercancel', () => { gesture = null; });
+    $('submitBtn').onclick = submit;
+    $('clearBtn').onclick = clearSel;
+
+    // ---- Keyboard input ----
+    document.addEventListener('keydown', e => {
+      if (phase !== 'play' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (/^[a-zA-Z]$/.test(e.key)) { typed += e.key.toLowerCase(); path = findPath(typed, board) || []; renderPath(); }
+      else if (e.key === 'Backspace') { typed = typed.slice(0, -1); path = typed ? findPath(typed, board) || [] : path.slice(0, -1); renderPath(); }
+      else if (e.key === 'Enter') submit();
+      else if (e.key === 'Escape') clearSel();
+      else return;
+      e.preventDefault();
+    });
+
+    // ---- Clock ----
+    function tick() {
+      const now = Date.now();
+      if (now < round.start) {
+        if (phase !== 'wait') { phase = 'wait'; boardEl.classList.add('waiting'); }
+        $('timer').textContent = fmt(round.end - round.start);
+        $('statusMsg').className = 'msg'; $('statusMsg').textContent = `Get ready… starts in ${Math.ceil((round.start - now) / 1000)}s`;
+        $('bar').style.width = '100%';
+      } else if (now < round.end) {
+        if (phase !== 'play') {
+          phase = 'play'; boardEl.classList.remove('waiting'); $('statusMsg').textContent = 'Go! 🚀';
+          loadDict().catch(() => say('Couldn\'t load dictionary. Refresh the page.', 'bad'));
+        }
+        const left = round.end - now;
+        $('timer').textContent = fmt(left);
+        $('timer').classList.toggle('low', left < 15000);
+        $('bar').style.width = (100 * left / (round.end - round.start)) + '%';
+      } else {
+        if (phase !== 'over') { phase = 'over'; clearInterval(iv); showResults(name, round, board, found); }
+      }
+    }
+    renderFound(); renderPath();
+    const iv = setInterval(tick, 200); tick();
+  }
+
+  function showResults(name, round, board, found) {
+    show('resultView');
+    window.scrollTo(0, 0);
+    const score = found.reduce((s, w) => s + points(w), 0);
+    const longest = found.slice().sort((a, b) => b.length - a.length)[0];
+    $('resName').textContent = name + ' · round ' + round.code;
+    $('resScore').textContent = score;
+    $('resSummary').textContent = `${found.length} words` + (longest ? ` · longest: ${longest.toUpperCase()}` : '');
+    $('resWords').innerHTML = found.length ? found.slice().sort((a, b) => b.length - a.length).map(w => `<span>${w}<i>+${points(w)}</i></span>`).join('') : '<span>None this time!</span>';
+    const text = `🔠 Big Bang Boggle (round ${round.code}): ${name} scored ${score} pts with ${found.length} words` + (longest ? `. Longest: ${longest.toUpperCase()}` : '');
+    $('shareBtn').onclick = async () => {
+      try { await navigator.clipboard.writeText(text); $('shareMsg').textContent = 'Copied! Paste it in the Teams chat.'; }
+      catch { prompt('Copy your result:', text); }
+    };
+    const goNext = () => {
+      const r = decodeRound($('nextCode').value);
+      if (!r) { $('nextMsg').textContent = 'Check the code on the big screen. It\'s 5 letters or numbers.'; return; }
+      if (r.code === round.code) { $('nextMsg').textContent = 'That\'s the round you just played. Wait for the host to start the next one.'; return; }
+      location.href = location.pathname + '?g=' + r.code;
+    };
+    $('nextJoinBtn').onclick = goNext;
+    $('nextCode').onkeydown = e => { if (e.key === 'Enter') goNext(); };
+    loadDict().then(() => {
+      const all = solve(board), mine = new Set(found);
+      const missed = all.filter(w => !mine.has(w)).slice(0, 30);
+      $('missedWords').innerHTML = `<span style="color:var(--text)">You found ${found.length} of ${all.length} possible</span>` +
+        missed.map(w => `<span>${w}<i>+${points(w)}</i></span>`).join('');
+    }).catch(() => { $('missedWords').textContent = ''; });
+  }
+
+  // =====================================================================
+  //  HOST
+  // =====================================================================
+  function startHost() {
+    document.body.classList.add('host');
+    const saved = store.get('bb-host');
+    if (saved) { const r = decodeRound(saved); if (r && Date.now() < r.end + 10 * 60000) return hostRound(r); }
+    show('hostSetup');
+    loadDict().catch(() => {});
+    const settings = store.get('bb-settings');
+    if (settings) { $('durSel').value = settings.seconds; $('leadSel').value = settings.lead; }
+    const label = () => { $('createBtn').textContent = 'Create round ' + ((store.get('bb-round-num') || 0) + 1); };
+    label();
+    $('resetCountBtn').onclick = () => { store.set('bb-round-num', 0); label(); };
+    $('createBtn').onclick = () => createRound(+$('durSel').value, +$('leadSel').value);
+  }
+
+  function createRound(seconds, lead) {
+    const start = Math.ceil((Date.now() + lead * 1000) / SLOT_MS) * SLOT_MS;
+    const r = decodeRound(encodeRound(start, seconds));
+    store.set('bb-round-num', (store.get('bb-round-num') || 0) + 1);
+    store.set('bb-settings', { seconds, lead });
+    store.set('bb-host', r.code);
+    hostRound(r);
+  }
+
+  function hostRound(round) {
+    show('hostRound');
+    window.scrollTo(0, 0);
+    const num = store.get('bb-round-num') || 1;
+    $('hostBoard').classList.add('waiting');
+    $('lateJoin').classList.add('hidden');
+    $('hostTimer').style.color = '';
+    const url = location.origin + location.pathname + '?g=' + round.code;
+    const board = makeBoard(round.code);
+    $('qr').innerHTML = ''; $('qrSmall').innerHTML = '';
+    new QRCode($('qr'), { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M });
+    new QRCode($('qrSmall'), { text: url, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M });
+    $('hostCode').textContent = $('hostCodeSmall').textContent = round.code;
+    $('hostUrl').textContent = location.origin + location.pathname;
+    $('playHere').href = url;
+    renderBoard($('hostBoard'), board);
+    $('hostBoard').onpointerdown = () => {
+      const n = $('hostNote'); n.classList.add('nudge');
+      clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('nudge'), 1500);
+    };
+    $('hostJoinBlock').classList.remove('hidden'); $('hostEndBlock').classList.add('hidden');
+    let phase = '';
+    function tick() {
+      const now = Date.now();
+      if (now < round.start) {
+        phase = 'wait';
+        $('hostTitle').textContent = `Round ${num} · Scan to join`;
+        $('hostPhase').textContent = `Round ${num} starts in`;
+        $('hostTimer').textContent = Math.ceil((round.start - now) / 1000);
+      } else if (now < round.end) {
+        if (phase !== 'play') {
+          phase = 'play';
+          $('hostBoard').classList.remove('waiting');
+          $('lateJoin').classList.remove('hidden');
+          $('hostJoinBlock').classList.add('hidden');
+          $('hostTitle').textContent = `Round ${num} · Go! 🚀`;
+          $('hostPhase').textContent = 'Time left';
+        }
+        $('hostTimer').textContent = fmt(round.end - now);
+        $('hostTimer').style.color = round.end - now < 15000 ? 'var(--bad)' : '';
+      } else if (phase !== 'over') {
+        phase = 'over'; clearInterval(iv);
+        $('hostBoard').classList.remove('waiting');
+        $('lateJoin').classList.add('hidden');
+        $('hostTitle').textContent = `Round ${num} · Time's up!`;
+        $('hostPhase').textContent = 'Round ' + num + ' · code ' + round.code;
+        $('newRoundBtn').textContent = `Start round ${num + 1}`;
+        $('hostTimer').textContent = '0:00'; $('hostTimer').style.color = '';
+        $('hostEndBlock').classList.remove('hidden');
+        $('possibleLabel').textContent = 'Working out every possible word…';
+        loadDict().then(() => {
+          const all = solve(board);
+          const max = all.reduce((s, w) => s + points(w), 0);
+          $('possibleLabel').textContent = `${all.length} words were possible (${max} pts). The longest:`;
+          $('hostAllWords').innerHTML = all.slice(0, 40).map(w => `<span>${w}<i>+${points(w)}</i></span>`).join('');
+        });
+      }
+    }
+    $('newRoundBtn').onclick = () => {
+      clearInterval(iv);
+      const s = store.get('bb-settings') || { seconds: 90, lead: 30 };
+      createRound(s.seconds, s.lead);
+    };
+    $('settingsBtn').onclick = () => { store.set('bb-host', null); clearInterval(iv); startHost(); };
+    const iv = setInterval(tick, 200); tick();
+  }
+
+  // ---------- Boot ----------
+  if (new URLSearchParams(location.search).has('host')) startHost(); else startPlayer();
+})();
+</script>
+</body>
+</html>
