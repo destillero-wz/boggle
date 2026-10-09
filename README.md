@@ -19,10 +19,11 @@ A free multiplayer Boggle game for phones. There's no server, no accounts and no
 - Pick a round length and a join time, then click **Create round 1**. Use 30 seconds or more for round 1, so people have time to scan.
 - Players scan the QR code with their phone camera, or open the link on a laptop and type the code. Then they enter their name.
   The board appears for everyone at the same moment.
-- When time's up, players tap **Copy my result** and paste it in the Teams chat, or call out their scores.
+- When time's up, players screenshot their score screen and post it in the chat. The highest score wins the round.
 - Click **Start round 2**. You get a new board and a new QR code with the same settings.
   Players either scan the new QR code, which takes them straight in because their name is remembered, or type the new code into the **Next round** box on their results screen.
-- Repeat for round 3. **Change round settings** goes back to the setup screen, and **Start again from round 1** resets the round count.
+- Repeat for round 3. **Change round settings** goes back to the setup screen.
+- **Resetting for a new game:** after any round, click **Finish game & reset to round 1**. The setup screen also has a **Start again from round 1** link.
 - **Playing on the host laptop:** use the **Play on this computer** button. The big-screen board is for display only.
 
 ## How it works
@@ -30,6 +31,6 @@ A free multiplayer Boggle game for phones. There's no server, no accounts and no
 - The round code (for example `K7QZ3`) encodes the start time and length, and the board is generated from that code.
   So everyone with the same code gets the same board and timer, without any server.
 - Words are checked against a built-in English dictionary of about 170,000 words, including British spellings.
-- Scoring follows the classic rules: 3–4 letters = 1, 5 = 2, 6 = 3, 7 = 5, 8+ = 11.
+- Scoring: 3 letters = 1 point, 4 = 2, 5 = 3, and so on (letters minus 2). The "Qu" tile counts as 2 letters.
 - **Timer sync relies on device clocks.** Phones and laptops set their time automatically, so they're usually within a second of each other.
   If someone's board appears noticeably early or late, their device clock is wrong.
